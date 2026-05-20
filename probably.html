@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&family=Pacifico&family=Fredoka:wght@600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #1e1e1e;
+    --bg-layar: #141414;
+    --bg-fact:  #1a2a1a;
+    --bg-btn:   #2d2d2d;
+    --bg-clear: #D85A30;
+    --bg-equal: #1D9E75;
+    --fg:       #ffffff;
+    --fg-op:    #1D9E75;
+    --fg-abu:   #aaaaaa;
+    --fg-fact:  #5DCAA5;
+    --fg-fact2: #cccccc;
+    --radius:   16px;
+  }
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+  }
+  .app {
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+  }
+  .layar {
+    background: var(--bg-layar);
+    border-radius: var(--radius);
+    padding: 16px 16px 12px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  .layar .ekspresi {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--fg-abu);
+    min-height: 18px;
+    word-break: break-all;
+    text-align: right;
+  }
+  .layar .angka {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--fg);
+    word-break: break-all;
+    text-align: right;
+    line-height: 1.1;
+  }
+  .fact-box {
+    background: var(--bg-fact);
+    border-radius: var(--radius);
+    padding: 10px 14px 12px;
+    display: none;
+    animation: slideDown 0.3s ease;
+  }
+  .fact-box.show { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .fact-judul {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--fg-fact);
+    letter-spacing: 0.08em;
+  }
+  .fact-timer {
+    font-size: 9px;
+    color: var(--fg-abu);
+    font-family: 'DM Mono', monospace;
+  }
+  .fact-isi {
+    font-size: 11px;
+    color: var(--fg-fact2);
+    line-height: 1.5;
+    font-family: 'DM Mono', monospace;
+  }
+  .judul {
+    text-align: center;
+    font-family: 'Pacifico', cursive;
+    font-size: 28px;
+    color: var(--fg-op);
+    letter-spacing: 0.02em;
+    padding: 4px 0 2px;
+    /* shadow tipis biar berasa fun */
+    text-shadow: 2px 3px 0px rgba(0,0,0,0.3);
+  }
+
+  /* alternatif Fredoka — comment/uncomment untuk ganti */
+  /* .judul { font-family: 'Fredoka', sans-serif; font-size: 30px; } */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .btn {
+    background: var(--bg-btn);
+    color: var(--fg);
+    border: none;
+    border-radius: 12px;
+    padding: 18px 0;
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.93); }
+  .btn.op    { color: var(--fg-op); }
+  .btn.clear { background: var(--bg-clear); }
+  .btn.equal { background: var(--bg-equal); }
+  .btn.equal:disabled {
+    background: #444;
+    color: #888;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn:not(:disabled):hover { filter: brightness(1.2); }
+  .btn.span2 { grid-column: span 2; }
+
+  /* ── Timeout banner ── */
+  .timeout-bar {
+    background: #2a1a1a;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: none;
+    text-align: center;
+    animation: slideDown 0.3s ease;
+  }
+  .timeout-bar.show { display: block; }
+  .timeout-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--bg-clear);
+    letter-spacing: 0.05em;
+  }
+  .timeout-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--bg-clear);
+    margin-top: 2px;
+  }
+
+  /* ── Overlay nasib buruk ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .overlay-box {
+    background: #1e1e1e;
+    border: 2px solid var(--bg-clear);
+    border-radius: 20px;
+    padding: 32px 28px;
+    text-align: center;
+    max-width: 280px;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity:0; }
+    to   { transform: scale(1);   opacity:1; }
+  }
+  .overlay-icon  { font-size: 48px; margin-bottom: 12px; }
+  .overlay-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--bg-clear);
+    margin-bottom: 10px;
+  }
+  .overlay-msg {
+    font-size: 13px;
+    color: var(--fg-abu);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+  .overlay-btn {
+    background: var(--bg-clear);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 28px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .overlay-btn:hover { filter: brightness(1.15); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Judul -->
+  <div class="judul">Cal-kyuh la'tor</div>
+
+  <!-- Layar -->
+  <div class="layar">
+    <div class="ekspresi" id="ekspresi"></div>
+    <div class="angka"    id="angka">0</div>
+  </div>
+
+  <!-- Fun Fact -->
+  <div class="fact-box" id="factBox">
+    <div class="fact-header">
+      <span class="fact-judul">✦ FUN FACT</span>
+      <span class="fact-timer" id="factTimer"></span>
+    </div>
+    <div class="fact-isi" id="factIsi"></div>
+  </div>
+
+  <!-- Timeout bar (muncul saat kena nasib buruk) -->
+  <div class="timeout-bar" id="timeoutBar">
+    <div class="timeout-label">⛔ TOMBOL = TERKUNCI</div>
+    <div class="timeout-count" id="timeoutCount">60</div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Numpad -->
+  <div class="numpad">
+    <button class="btn clear"  onclick="clear_()">C</button>
+    <button class="btn"        onclick="hapus()">⌫</button>
+    <button class="btn op"     onclick="tekanOp('%')">%</button>
+    <button class="btn op"     onclick="tekanOp('/')">÷</button>
+
+    <button class="btn"        onclick="tekanAngka('7')">7</button>
+    <button class="btn"        onclick="tekanAngka('8')">8</button>
+    <button class="btn"        onclick="tekanAngka('9')">9</button>
+    <button class="btn op"     onclick="tekanOp('*')">×</button>
+
+    <button class="btn"        onclick="tekanAngka('4')">4</button>
+    <button class="btn"        onclick="tekanAngka('5')">5</button>
+    <button class="btn"        onclick="tekanAngka('6')">6</button>
+    <button class="btn op"     onclick="tekanOp('-')">−</button>
+
+    <button class="btn"        onclick="tekanAngka('1')">1</button>
+    <button class="btn"        onclick="tekanAngka('2')">2</button>
+    <button class="btn"        onclick="tekanAngka('3')">3</button>
+    <button class="btn op"     onclick="tekanOp('+')">+</button>
+
+    <button class="btn span2"  onclick="tekanAngka('0')">0</button>
+    <button class="btn"        onclick="tekanTitik()">.</button>
+    <button class="btn equal"  id="btnEqual" onclick="hitung()">=</button>
+  </div>
+</div>
+
+<!-- Overlay Nasib Buruk -->
+<div class="overlay" id="overlay" style="display:none">
+  <div class="overlay-box">
+    <div class="overlay-icon">🎲</div>
+    <div class="overlay-title">Nasib Buruk!</div>
+    <div class="overlay-msg">Anda kurang beruntung, carilah jawabannya sendiri dengan kertas dan pensil!<br><br>Tombol = dikunci selama <strong>60 detik</strong>.</div>
+    <button class="overlay-btn" onclick="tutupOverlay()">Tutup</button>
+  </div>
+</div>
+
+<!-- Audio dimuat via AudioContext -->
+
+<script>
+const FACTS = [
+  "Panda makan bambu hampir sepanjang hari.",
+  "Burung flamingo berwarna pink karena makanannya.",
+  "Kupu-kupu mencicipi makanan dengan kaki mereka.",
+  "Siput bisa tidur sampai 3 tahun berturut-turut.",
+  "Katak bisa membeku di musim dingin dan hidup lagi.",
+  "Hujan bisa mengandung bakteri dari udara.",
+  "Ada danau di Afrika yang bisa membatu hewan yang menyentuhnya.",
+  "Planet Uranus berputar miring hampir 90 derajat.",
+  "Ada lebih banyak kemungkinan permainan catur daripada atom di alam semesta.",
+  "Mata manusia bisa membedakan hingga jutaan warna.",
+  "Darah lobster berwarna biru karena mengandung tembaga.",
+  "Bintang laut tidak punya otak sama sekali.",
+  "Ada awan yang bisa terbakar — disebut awan api pyrocumulus.",
+  "Tubuh manusia memancarkan cahaya lemah yang tak terlihat mata biasa.",
+  "Ada ikan (lungfish) yang bisa berjalan di darat.",
+  "Gunung berapi bisa terbentuk di bawah laut.",
+  "Ada hujan berlian di planet Neptunus dan Uranus.",
+  "Kucing bisa membuat lebih dari 100 suara berbeda.",
+  "Anjing punya penciuman 10.000–100.000 kali lebih tajam dari manusia.",
+  "Zebra punya pola belang unik seperti sidik jari — tidak ada yang sama.",
+  "Burung bisa melihat medan magnet bumi untuk navigasi.",
+  "Tumbuhan bisa berkomunikasi lewat jaringan jamur bawah tanah.",
+  "Ada jamur yang bercahaya dalam gelap.",
+  "Air laut mengandung emas terlarut dalam jumlah kecil.",
+  "Kita tidak bisa menggelitik diri sendiri karena otak sudah memprediksinya.",
+  "Otak bisa mengisi titik buta penglihatan secara otomatis.",
+  "Dunia punya lebih dari 7.000 bahasa yang digunakan.",
+  "Bahasa tubuh menyampaikan sekitar 55% dari komunikasi kita.",
+  "Senyum bisa menular dan mempengaruhi suasana hati orang sekitar.",
+  "Musik bisa meningkatkan fokus dan produktivitas.",
+  "Warna merah terbukti bisa meningkatkan nafsu makan.",
+  "Tidur sangat penting untuk konsolidasi memori otak.",
+  "Manusia bisa bertahan tanpa makan lebih lama daripada tanpa tidur.",
+  "Satu awan bisa memiliki berat hingga jutaan ton air.",
+  "Ubur-ubur Turritopsis dohrnii bisa kembali ke fase muda — hampir abadi.",
+  "Es di Antartika menyimpan gelembung udara dari ratusan ribu tahun lalu.",
+  "Matahari akan membesar menjadi raksasa merah sekitar 5 miliar tahun lagi.",
+  "Semua benua di Bumi dulunya menyatu menjadi satu — disebut Pangea.",
+  "Fosil bisa terbentuk bukan hanya dari tulang, tapi juga dari jejak kaki.",
+  "Ada bakteri yang hidup di kawah gunung berapi dan air mendidih.",
+  "Sekitar 60% tubuh manusia terdiri dari air.",
+  "Manusia berbagi sekitar 60% DNA dengan pisang.",
+  "Telinga dan hidung manusia terus tumbuh sepanjang hidup.",
+  "Manusia bisa mengenali hingga 5.000 wajah berbeda.",
+  "Hampir semua orang bermimpi setiap malam, meski sering terlupa.",
+  "Fenomena deja vu diduga terjadi karena sinyal otak yang tumpang tindih.",
+  "Waktu terasa lebih cepat saat kita menikmati sesuatu.",
+  "Otak manusia bisa berubah dan membentuk koneksi baru — neuroplastisitas.",
+  "Belajar hal baru secara rutin memperkuat jaringan saraf otak.",
+  "Membaca fiksi terbukti meningkatkan empati seseorang.",
+  "Olahraga aerobik meningkatkan volume hippocampus di otak.",
+  "Dehidrasi ringan pun bisa menurunkan konsentrasi secara signifikan.",
+  "Paparan sinar matahari pagi membantu mengatur ritme sirkadian dan mood.",
+  "Musik dalam tangga nada minor cenderung memicu perasaan melankolis.",
+  "Otak manusia mengenali wajah lebih cepat dari objek apapun.",
+  "Manusia adalah satu-satunya hewan yang bisa memasak makanannya sendiri.",
+  "Rasa ingin tahu terbukti secara ilmiah mempercepat proses belajar.",
+];
+
+let ekspresi    = "";
+let baru        = true;
+let factTimer   = null;
+let cdTimer     = null;
+let factHistory = [];
+let terkunci    = false;
+let lockTimer   = null;
+let lockCd      = null;
+
+const elEkspresi   = document.getElementById('ekspresi');
+const elAngka      = document.getElementById('angka');
+const elFactBox    = document.getElementById('factBox');
+const elFactIsi    = document.getElementById('factIsi');
+const elFactTimer  = document.getElementById('factTimer');
+const elOverlay    = document.getElementById('overlay');
+const elBtnEqual   = document.getElementById('btnEqual');
+const elTimeoutBar = document.getElementById('timeoutBar');
+const elTimeoutCnt = document.getElementById('timeoutCount');
+// ── Audio via AudioContext (bypass autoplay block) ──
+let audioCtx = null;
+let sfxBuffer = null;
+
+const SFX_URL = 'https://raw.githubusercontent.com/TrankuZ/idk-what-im-doing/refs/heads/main/Left%204%20Dead%202%20Sounds%20Hunter.mp3';
+
+async function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    const resp = await fetch(SFX_URL, { mode: 'cors', cache: 'force-cache' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const arr  = await resp.arrayBuffer();
+    sfxBuffer  = await audioCtx.decodeAudioData(arr);
+    console.log('SFX berhasil dimuat!');
+  } catch(e) {
+    // Fallback: coba pakai Audio element biasa
+    console.warn('AudioContext gagal, coba fallback...', e);
+    try {
+      const audio = new Audio(SFX_URL);
+      audio.crossOrigin = 'anonymous';
+      await audio.load();
+      sfxBuffer = audio; // simpan objek Audio sebagai fallback
+    } catch(e2) { console.warn('Fallback juga gagal:', e2); }
+  }
+}
+
+function putarSFX() {
+  if (!sfxBuffer) return;
+  // Cek apakah sfxBuffer adalah AudioBuffer atau Audio element (fallback)
+  if (sfxBuffer instanceof AudioBuffer) {
+    const src = audioCtx.createBufferSource();
+    src.buffer = sfxBuffer;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } else {
+    // fallback Audio element
+    sfxBuffer.currentTime = 0;
+    sfxBuffer.play().catch(()=>{});
+  }
+}
+
+// Unlock & preload audio saat pertama kali user klik apapun
+document.addEventListener('click', () => initAudio(), { once: true });
+
+// ── Mulai timeout kunci 60 detik ──
+function mulaiTimeout() {
+  terkunci = true;
+  elBtnEqual.disabled = true;
+  elTimeoutBar.classList.add('show');
+
+  let sisa = 60;
+  elTimeoutCnt.textContent = sisa;
+
+  lockCd = setInterval(() => {
+    sisa--;
+    elTimeoutCnt.textContent = sisa;
+    if (sisa <= 0) {
+      clearInterval(lockCd);
+      terkunci = false;
+      elBtnEqual.disabled = false;
+      elTimeoutBar.classList.remove('show');
+    }
+  }, 1000);
+}
+
+function tekanAngka(n) {
+  if (baru) { elAngka.textContent = n; baru = false; }
+  else {
+    const cur = elAngka.textContent;
+    elAngka.textContent = cur === '0' ? n : cur + n;
+  }
+}
+
+function tekanTitik() {
+  if (baru) { elAngka.textContent = '0.'; baru = false; }
+  else if (!elAngka.textContent.includes('.')) elAngka.textContent += '.';
+}
+
+function tekanOp(op) {
+  ekspresi += elAngka.textContent + ' ' + (op==='*'?'×':op==='/'?'÷':op) + ' ';
+  elEkspresi.textContent = ekspresi;
+  baru = true;
+}
+
+function hapus() {
+  const cur = elAngka.textContent;
+  if (baru || cur.length <= 1) { elAngka.textContent = '0'; baru = true; }
+  else elAngka.textContent = cur.slice(0,-1);
+}
+
+function clear_() {
+  ekspresi = '';
+  baru = true;
+  elAngka.textContent = '0';
+  elEkspresi.textContent = '';
+  sembunyikanFact();
+}
+
+function hitung() {
+  if (terkunci) return;
+
+  // 1/6 peluang sial
+  if (Math.floor(Math.random() * 6) === 0) {
+    // Putar SFX
+    putarSFX();
+    // Tampilkan overlay
+    elOverlay.style.display = 'flex';
+    return;
+  }
+
+  try {
+    let expr = ekspresi.replace(/×/g,'*').replace(/÷/g,'/') + elAngka.textContent;
+    expr = expr.replace(/(\d+\.?\d*)\s*%/g, '($1/100)');
+    let hasil = Function('"use strict"; return (' + expr + ')')();
+    let hasilStr = Number.isInteger(hasil) ? String(hasil) : parseFloat(hasil.toFixed(10)).toString();
+    elEkspresi.textContent = expr.replace(/\*/g,'×').replace(/\//g,'÷') + ' =';
+    elAngka.textContent = hasilStr;
+    ekspresi = '';
+    baru = true;
+    tampilFact();
+  } catch(e) {
+    elAngka.textContent = 'Error';
+    elEkspresi.textContent = '';
+    ekspresi = '';
+    baru = true;
+  }
+}
+
+function tutupOverlay() {
+  elOverlay.style.display = 'none';
+  clear_();
+  mulaiTimeout(); // mulai kunci 60 detik setelah overlay ditutup
+}
+
+function tampilFact() {
+  if (factHistory.length >= FACTS.length) factHistory = [];
+  let available = FACTS.map((_,i)=>i).filter(i => !factHistory.includes(i));
+  let idx = available[Math.floor(Math.random() * available.length)];
+  factHistory.push(idx);
+
+  elFactIsi.textContent = FACTS[idx];
+  elFactBox.classList.add('show');
+
+  if (factTimer) clearTimeout(factTimer);
+  if (cdTimer)   clearInterval(cdTimer);
+
+  let sisa = 10;
+  elFactTimer.textContent = `tutup dalam ${sisa}d`;
+  cdTimer = setInterval(() => {
+    sisa--;
+    if (sisa >= 0) elFactTimer.textContent = `tutup dalam ${sisa}d`;
+    else clearInterval(cdTimer);
+  }, 1000);
+  factTimer = setTimeout(sembunyikanFact, 10000);
+}
+
+function sembunyikanFact() {
+  elFactBox.classList.remove('show');
+  elFactTimer.textContent = '';
+  if (factTimer) clearTimeout(factTimer);
+  if (cdTimer)   clearInterval(cdTimer);
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key>='0'&&e.key<='9') tekanAngka(e.key);
+  else if (e.key==='.') tekanTitik();
+  else if (e.key==='+') tekanOp('+');
+  else if (e.key==='-') tekanOp('-');
+  else if (e.key==='*') tekanOp('*');
+  else if (e.key==='/') { e.preventDefault(); tekanOp('/'); }
+  else if (e.key==='%') tekanOp('%');
+  else if (e.key==='Enter'||e.key==='=') hitung();
+  else if (e.key==='Backspace') hapus();
+  else if (e.key==='Escape') clear_();
+});
+</script>
+</body>
+</html>
